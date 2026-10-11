@@ -1,4 +1,4 @@
-# Happy 输入法安装脚本
+﻿# Happy 输入法安装脚本
 # 用法（管理员 PowerShell）：
 #   .\scripts\install.ps1 [-Release]
 # 说明：编译 → 拷贝 DLL → regsvr32 注册（DllRegisterServer 内部自动 HKLM/HKCU 回退）。
@@ -40,5 +40,19 @@ Write-Host "==> 已安装到 $Target"
 
 # 4. 注册 COM + TSF（DllRegisterServer 自带 HKLM→HKCU 回退）
 Write-Host "==> regsvr32 注册..." -ForegroundColor Cyan
-Start-Process regsvr32 -ArgumentList "/s", "`"$Target`"" -Wait
-Write-Host "安装完成。按 Win+Space 切换到「Happy 输入法」。"
+$proc = Start-Process regsvr32 -ArgumentList "/s", "`"$Target`"" -Wait -PassThru
+if ($proc.ExitCode -ne 0) {
+    Write-Host "注册失败（退出码 $($proc.ExitCode)）。" -ForegroundColor Red
+    Write-Host "TSF 输入法档案必须写入 HKLM，请以【管理员 PowerShell】重新运行本脚本：" -ForegroundColor Yellow
+    Write-Host "  Start-Process powershell -Verb RunAs -ArgumentList '-File `"$PSCommandPath`" -Release'"
+    exit 1
+}
+
+# 5. 校验注册结果
+$clsid = "{1F2E8C4A-6B3D-4E7F-9A51-C8D2B0E4F6A3}"
+$profile = "HKLM:\SOFTWARE\Microsoft\CTF\TIP\$clsid\LanguageProfile\0x00000804\{2A9D7B5E-8C40-4F1B-B6E2-D3F5A7C9E1B4}"
+if (-not (Test-Path $profile)) {
+    Write-Host "警告：未在注册表中找到语言档案，输入法可能不会出现在 Win+Space 列表中。" -ForegroundColor Yellow
+    exit 1
+}
+Write-Host "安装完成。按 Win+Space 切换到「Happy 输入法」。" -ForegroundColor Green

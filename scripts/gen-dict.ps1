@@ -1,4 +1,4 @@
-# Dev-time tool: generate embedded dictionaries from mozillazg/pinyin-data
+﻿# Dev-time tool: generate embedded dictionaries from mozillazg/pinyin-data
 # Usage: powershell -File scripts/gen-dict.ps1 -Phrase <phrase_pinyin.txt> -Chars <pinyin_data.txt>
 # Output: crates/happy-core/res/pinyin.dict (key = toneless pinyin, values joined by '|', sorted by key)
 #         crates/happy-core/res/syllables.txt (all valid toneless syllables, sorted & unique)

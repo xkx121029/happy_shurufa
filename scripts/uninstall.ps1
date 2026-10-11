@@ -1,4 +1,4 @@
-# Happy 输入法卸载脚本
+﻿# Happy 输入法卸载脚本
 # 用法：.\scripts\uninstall.ps1
 
 $ErrorActionPreference = "Continue"
