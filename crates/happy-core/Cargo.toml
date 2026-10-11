@@ -1,0 +1,12 @@
+[package]
+name = "happy-core"
+description = "Happy 输入法纯逻辑核心：模式状态机、拼音引擎、命令联想、频率学习、配置"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+ureq = { version = "2", default-features = false, features = ["json", "tls"] }

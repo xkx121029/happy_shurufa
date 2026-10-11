@@ -1,0 +1,8 @@
+[package]
+name = "happy-installer"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "happy-installer"
+path = "src/main.rs"
