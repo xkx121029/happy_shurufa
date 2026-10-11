@@ -7,12 +7,12 @@ use std::mem::ManuallyDrop;
 use std::sync::{Arc, Mutex};
 
 use windows::core::BOOL;
-use windows::Win32::Foundation::{FALSE, RECT, S_OK};
+use windows::Win32::Foundation::{FALSE, RECT};
 use windows::Win32::UI::TextServices::{
     GUID_PROP_ATTRIBUTE, ITfComposition, ITfCompositionSink, ITfContext, ITfContextComposition,
     ITfEditSession, ITfEditSession_Impl, ITfInsertAtSelection, ITfRange, TF_AE_NONE,
-    TF_ANCHOR_END, TF_ANCHOR_START, TF_ES_READWRITE, TF_IAS_QUERYONLY, TF_SELECTION,
-    TF_SELECTIONSTYLE, TF_ST_CORRECTION,
+    TF_ANCHOR_END, TF_ANCHOR_START, TF_ES_READ, TF_ES_READWRITE, TF_ES_SYNC, TF_IAS_QUERYONLY,
+    TF_SELECTION, TF_SELECTIONSTYLE, TF_ST_CORRECTION,
 };
 use windows::Win32::System::Variant::VARIANT;
 use windows::core::{Interface, Result, implement};
@@ -32,10 +32,10 @@ where
 
 fn request(tid: u32, context: &ITfContext, session: &ITfEditSession) -> Result<()> {
     unsafe {
-        let result = context.RequestEditSession(tid, session, TF_ES_READWRITE)?;
-        if result != S_OK {
-            return Err(windows::core::Error::from(result));
-        }
+        // 必须带 TF_ES_SYNC：否则会话被排队异步执行，RequestEditSession 返回
+        // TF_S_ASYNC（成功码，非错误），调用方拿不到 composition / 文本 / 坐标。
+        // 真正的失败由 windows-rs 的 Result 直接以 Err 返回。
+        let _ = context.RequestEditSession(tid, session, TF_ES_READWRITE | TF_ES_SYNC)?;
     }
     Ok(())
 }
@@ -280,16 +280,9 @@ pub fn get_preceding_text(tid: u32, context: &ITfContext, max_units: usize) -> R
         max_units,
         out: out.clone(),
     });
-    // READ 权限即可；同步请求在按键上下文中是安全的
+    // READ + SYNC；按键上下文中可同步执行，异步时退化为空串
     unsafe {
-        let result = context.RequestEditSession(
-            tid,
-            &session,
-            windows::Win32::UI::TextServices::TF_ES_READ | windows::Win32::UI::TextServices::TF_ES_SYNC,
-        )?;
-        if result != S_OK {
-            return Err(windows::core::Error::from(result));
-        }
+        let _ = context.RequestEditSession(tid, &session, TF_ES_READ | TF_ES_SYNC)?;
     }
     Ok(take(&out).unwrap_or_default())
 }
@@ -367,15 +360,9 @@ pub fn caret_pos(tid: u32, context: &ITfContext) -> Option<(i32, i32)> {
         out: out.clone(),
     });
     unsafe {
-        let result = context.RequestEditSession(
-            tid,
-            &session,
-            windows::Win32::UI::TextServices::TF_ES_READ | windows::Win32::UI::TextServices::TF_ES_SYNC,
-        )
-        .ok()?;
-        if result != S_OK {
-            return None;
-        }
+        let _ = context
+            .RequestEditSession(tid, &session, TF_ES_READ | TF_ES_SYNC)
+            .ok()?;
     }
     let (x, y) = take(&out)?;
     if x <= 0 && y <= 0 {
