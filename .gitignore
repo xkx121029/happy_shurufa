@@ -8,5 +8,8 @@
 .idea/
 .vscode/
 
+# 编辑器内部产物
+.trae/
+
 # 本地运行数据
 *.pdb
