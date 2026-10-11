@@ -132,10 +132,22 @@ fn push_values(out: &mut Vec<String>, values: &str, limit: usize) {
         if out.len() >= limit {
             return;
         }
-        if !word.is_empty() {
+        // 词库单音节条目按码位罗列，开头往往是扩展区生僻字（㒾、𠀍 等）。
+        // 过滤掉这些生僻区，常用字自然靠前，避免「是/时/事」被挤出候选。
+        if !word.is_empty() && word.chars().all(is_common_char) {
             out.push(word.to_string());
         }
     }
+}
+
+/// 是否属于适合作为候选的常用汉字。
+/// 排除 CJK 扩展 A（U+3400–U+4DBF）、扩展 B~F（非 BMP，U+20000 起）
+/// 以及兼容汉字区（U+F900–U+FAFF）——这些几乎都是生僻字。
+fn is_common_char(c: char) -> bool {
+    let v = c as u32;
+    !(0x3400..=0x4DBF).contains(&v)
+        && !(0x20000..=0x2FA1F).contains(&v)
+        && !(0xF900..=0xFAFF).contains(&v)
 }
 
 #[cfg(test)]

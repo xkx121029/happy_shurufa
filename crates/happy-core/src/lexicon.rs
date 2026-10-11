@@ -196,12 +196,13 @@ pub fn suggest(token: &str, freq: &FreqMap, limit: usize) -> Vec<CommandHit> {
     if hits.is_empty() {
         return hits;
     }
+    // 按用户频率降序；频率相同则保持内置词库的策划顺序（常用命令靠前）。
+    // 注：不再按命令长度排序——长度排序会把 "git status" 等常用命令挤出候选。
+    //      sort_by 稳定，等频项保留 COMMANDS 中的原始次序。
     hits.sort_by(|a, b| {
         let fa = freq.get(&a.text);
         let fb = freq.get(&b.text);
         fb.cmp(&fa)
-            .then_with(|| a.text.len().cmp(&b.text.len()))
-            .then_with(|| a.text.cmp(&b.text))
     });
     hits.truncate(limit);
     hits
@@ -244,10 +245,11 @@ mod tests {
 
     #[test]
     fn 补全剩余() {
+        // token 是命令首词的前缀："gi" → "git status" 尚未输入的剩余为 "t status"
         let freq = FreqMap::default();
-        let hits = suggest("che", &freq, 9);
-        let hit = hits.iter().find(|h| h.text == "git checkout").unwrap();
-        assert_eq!(remainder(hit), "ckout");
+        let hits = suggest("gi", &freq, 9);
+        let hit = hits.iter().find(|h| h.text == "git status").unwrap();
+        assert_eq!(remainder(hit), "t status");
     }
 
     #[test]
